@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PulsePath | Emergency Corridor & Hospital Bed Triage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel for client-side JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --ink: #ffffff;
+      --accent: #00f2ff;
+      --danger: #ff2d55;
+      --success: #00ffaa;
+      --surface: #1a1a1c;
+      --border: rgba(255, 255, 255, 0.08);
+      --ink-muted: rgba(255, 255, 255, 0.4);
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      margin: 0;
+    }
+    .font-syne { font-family: 'Syne', sans-serif; }
+    .font-mono-tech { font-family: 'JetBrains Mono', monospace; }
+    .label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--ink-muted);
+      font-weight: 500;
+    }
+    .unit-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      padding: 2px 6px;
+      border: 1px solid currentColor;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-tactical {
+      background: var(--ink);
+      color: var(--bg);
+      border: none;
+      padding: 0.6rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .btn-tactical:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .btn-tactical-outline {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--border);
+      padding: 0.6rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .btn-tactical-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .card-tactical {
+      background: var(--surface);
+      border-left: 3px solid var(--ink-muted);
+      padding: 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+    .card-urgent {
+      border-left-color: var(--danger) !important;
+      background: rgba(255, 45, 85, 0.05) !important;
+    }
+    @keyframes ecg-dash {
+      to { stroke-dashoffset: -1000; }
+    }
+    .animate-ecg {
+      stroke-dasharray: 20 8;
+      animation: ecg-dash 20s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Web Audio Synthesizer
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.isMuted = false;
+      }
+      init() {
+        if (!this.ctx && window.AudioContext) {
+          this.ctx = new window.AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playHeartBeep(pitch = 880) {
+        if (this.isMuted) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(pitch, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.08);
+        } catch(e) {}
+      }
+      playChirp() {
+        if (this.isMuted) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(1400, this.ctx.currentTime);
+          osc.frequency.setValueAtTime(1200, this.ctx.currentTime + 0.05);
+          gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.09);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.09);
+        } catch(e) {}
+      }
+    }
+    const sound = new SoundEngine();
+
+    // Initial Data
+    const INITIAL_HOSPITALS = [
+      { id: 'hosp-metro', name: 'Metro Health Level-1 Trauma', shortName: 'Metro Trauma', beds: { traumaBay: { total: 6, occ: 4, res: 1 }, icu: { total: 24, occ: 20, res: 2 } }, wait: 4, surgeon: true, status: 'OPEN' },
+      { id: 'hosp-stjude', name: 'St. Jude Comprehensive Stroke & Neuro', shortName: 'St. Jude Neuro', beds: { traumaBay: { total: 4, occ: 3, res: 0 }, icu: { total: 18, occ: 16, res: 1 } }, wait: 12, surgeon: false, status: 'WARNING' },
+      { id: 'hosp-memorial', name: 'Memorial Regional Pediatric & Burn', shortName: 'Memorial Peds', beds: { traumaBay: { total: 4, occ: 1, res: 1 }, icu: { total: 16, occ: 11, res: 2 } }, wait: 2, surgeon: true, status: 'OPEN' },
+      { id: 'hosp-univ', name: 'University Heart & Vascular Institute', shortName: 'Univ Heart', beds: { traumaBay: { total: 3, occ: 2, res: 0 }, icu: { total: 22, occ: 19, res: 2 } }, wait: 6, surgeon: false, status: 'OPEN' }
+    ];
+
+    const INITIAL_AMBULANCES = [
+      { id: 'amb-1', callsign: 'ALS-01', type: 'ALS', status: 'en_route', speed: 68, progress: 62, eta: 215, dist: 2.3, siren: true, hosp: 'Metro Trauma', pt: 'Arthur Sterling', code: 'Code STEMI', coords: { x: 52, y: 42 } },
+      { id: 'amb-2', callsign: 'MICU-04', type: 'MICU', status: 'en_route', speed: 62, progress: 24, eta: 410, dist: 4.8, siren: true, hosp: 'Metro Trauma', pt: 'Elena Rostova', code: 'Level 1 Trauma', coords: { x: 34, y: 56 } },
+      { id: 'amb-3', callsign: 'ALS-09', type: 'ALS', status: 'en_route', speed: 58, progress: 54, eta: 300, dist: 2.8, siren: true, hosp: 'St. Jude Neuro', pt: 'Marcus Chen', code: 'Code Stroke', coords: { x: 23, y: 54 } },
+      { id: 'amb-4', callsign: 'BLS-12', type: 'BLS', status: 'available', speed: 0, progress: 0, eta: 0, dist: 0, siren: false, hosp: null, pt: null, code: null, coords: { x: 45, y: 65 } }
+    ];
+
+    const INITIAL_PATIENT = {
+      id: 'PT-9022',
+      name: 'Elena Rostova',
+      age: 29,
+      gender: 'F',
+      complaint: 'Polytrauma: Motorcycle vs SUV collision at 60km/h with chest wall flail',
+      esi: 1,
+      code: 'Level 1 Trauma',
+      vitals: { hr: 132, sbp: 78, dbp: 46, spo2: 88, rr: 32, temp: 35.8, gcs: 9 },
+      interventions: ['RSI Intubation with 7.5 ETT', 'Right needle decompression', 'Tranexamic Acid (TXA) 1g IV infused', 'Whole blood unit #1 rapid infuser'],
+      assignedBay: 'Trauma Resuscitation Bay #1'
+    };
+
+    function App() {
+      const [view, setView] = useState('overview');
+      const [hospitals, setHospitals] = useState(INITIAL_HOSPITALS);
+      const [ambulances, setAmbulances] = useState(INITIAL_AMBULANCES);
+      const [patient, setPatient] = useState(INITIAL_PATIENT);
+      const [isSimulating, setIsSimulating] = useState(true);
+      const [alert, setAlert] = useState('[CRITICAL] BED RESERVATION LOCKED: TRAUMA BAY HELD AT METRO TRAUMA CENTER');
+      const [isHandoffOpen, setIsHandoffOpen] = useState(false);
+      const [handoffNotes, setHandoffNotes] = useState('Patient delivered to ED Bay 1. Airway secure, vitals stabilized en route.');
+      const [handoffVitals, setHandoffVitals] = useState({ ...INITIAL_PATIENT.vitals });
+      const canvasRef = useRef(null);
+
+      const completeHandoff = (e) => {
+        if (e) e.preventDefault();
+        // 1. Mark patient as delivered
+        setPatient(prev => ({
+          ...prev,
+          status: 'delivered',
+          deliveryTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          handoffNotes: handoffNotes,
+          vitals: { ...handoffVitals }
+        }));
+
+        // 2. Occupy bed in Metro Trauma
+        setHospitals(prev => prev.map(h => {
+          if (h.id === 'hosp-metro') {
+            return {
+              ...h,
+              beds: {
+                ...h.beds,
+                traumaBay: {
+                  ...h.beds.traumaBay,
+                  res: Math.max(0, h.beds.traumaBay.res - 1),
+                  occ: Math.min(h.beds.traumaBay.total, h.beds.traumaBay.occ + 1)
+                }
+              }
+            };
+          }
+          return h;
+        }));
+
+        // 3. Free ambulance
+        setAmbulances(prev => prev.map(a => a.callsign === 'MICU-04' ? { ...a, status: 'available', speed: 0, eta: 0 } : a));
+
+        sound.playChirp();
+        setAlert(`TRANSFER OF CARE COMPLETE: ${patient.id} (${patient.name}) DELIVERED. TRAUMA BAY 1 MARKED OCCUPIED.`);
+        setIsHandoffOpen(false);
+      };
+
+      // Simulation loop
+      useEffect(() => {
+        if (!isSimulating) return;
+        const interval = setInterval(() => {
+          setAmbulances(prev => prev.map(a => {
+            if (a.status !== 'en_route') return a;
+            const nextProg = Math.min(100, a.progress + 0.5);
+            return {
+              ...a,
+              progress: nextProg,
+              eta: Math.max(0, a.eta - 1),
+              speed: Math.floor(58 + Math.sin(Date.now() / 2000) * 8)
+            };
+          }));
+
+          setPatient(prev => ({
+            ...prev,
+            vitals: {
+              ...prev.vitals,
+              hr: Math.max(80, Math.min(160, prev.vitals.hr + (Math.random() > 0.5 ? 1 : -1)))
+            }
+          }));
+
+          sound.playHeartBeep(patient.vitals.hr > 120 ? 980 : 880);
+        }, 1000);
+        return () => clearInterval(interval);
+      }, [isSimulating, patient.vitals.hr]);
+
+      // ECG Animation Canvas
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let x = 0;
+        let animationId;
+        const baseline = canvas.height / 2;
+
+        const getEcgY = (t) => {
+          const c = t % 100;
+          if (c < 10) return baseline;
+          if (c < 16) return baseline - 8;
+          if (c < 22) return baseline;
+          if (c < 25) return baseline + 6;
+          if (c < 30) return baseline - 45;
+          if (c < 35) return baseline + 18;
+          if (c < 45) return baseline;
+          if (c < 58) return baseline - 14;
+          return baseline;
+        };
+
+        let lastY = baseline;
+        let step = 0;
+
+        const loop = () => {
+          ctx.fillStyle = '#050505';
+          ctx.fillRect((x + 1) % canvas.width, 0, 16, canvas.height);
+          
+          const y = getEcgY(step * 1.5);
+          ctx.strokeStyle = '#00ffaa';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x, lastY);
+          ctx.lineTo((x + 2) % canvas.width, y);
+          ctx.stroke();
+
+          lastY = y;
+          x = (x + 2) % canvas.width;
+          step++;
+          animationId = requestAnimationFrame(loop);
+        };
+        loop();
+        return () => cancelAnimationFrame(animationId);
+      }, []);
+
+      const totalCritical = hospitals.reduce((acc, h) => acc + h.beds.traumaBay.total + h.beds.icu.total, 0);
+      const freeCritical = hospitals.reduce((acc, h) => acc + (h.beds.traumaBay.total - h.beds.traumaBay.occ - h.beds.traumaBay.res) + (h.beds.icu.total - h.beds.icu.occ - h.beds.icu.res), 0);
+
+      return (
+        <div className="min-h-screen flex flex-col bg-[#0d0d0d] text-white">
+          {/* Header */}
+          <header className="h-16 px-6 border-b border-white/10 flex items-center justify-between bg-[#0d0d0d]">
+            <div className="flex items-center gap-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00f2ff" strokeWidth="3">
+                <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
+              </svg>
+              <span className="font-syne text-xl font-extrabold uppercase tracking-tight">PulsePath</span>
+            </div>
+
+            <nav className="flex h-full font-mono-tech text-[11px] uppercase">
+              {['overview', 'corridor', 'triage', 'telemetry', 'dispatch'].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setView(t)}
+                  className={`px-5 border-l border-white/10 transition-colors ${
+                    view === t ? 'text-[#00f2ff] bg-[#00f2ff]/5 border-b-2 border-b-[#00f2ff]' : 'text-white/40 hover:text-white'
+                  }`}
+                >
+                  {t === 'overview' ? 'Live Command' : t === 'corridor' ? 'Corridor Radar' : t === 'triage' ? 'Bed Triage' : t === 'telemetry' ? 'Telemetry' : 'CAD Dispatch'}
+                </button>
+              ))}
+            </nav>
+
+            <div className="flex items-center gap-3 font-mono-tech text-xs">
+              <button 
+                onClick={() => setIsSimulating(!isSimulating)}
+                className="px-2 py-1 bg-[#1a1a1c] border border-white/10 text-white/70"
+              >
+                {isSimulating ? 'PAUSE' : 'PLAY'}
+              </button>
+              <span className="label text-[#00f2ff]">• SYSTEM ONLINE</span>
+              <button onClick={() => setView('dispatch')} className="btn-tactical py-1.5 px-3">CAD Dispatch</button>
+            </div>
+          </header>
+
+          {/* Alert Ticker */}
+          <div className="bg-[#ff2d55] text-white px-6 py-1.5 font-mono-tech font-bold text-[11px] flex justify-between tracking-wide">
+            <div>{alert}</div>
+            <div>REGION-WIDE SYNC ACTIVE 100%</div>
+          </div>
+
+          {/* Main 3-Column Workstation */}
+          {view === 'overview' && (
+            <main className="flex-1 grid grid-cols-1 lg:grid-cols-[280px_1fr_340px] border-b border-white/10">
+              {/* Left Column: Stats & Fleet */}
+              <section className="border-r border-white/10 p-6 flex flex-col bg-[#0d0d0d]">
+                <div className="label">System Overview</div>
+                <div className="grid grid-cols-1 gap-[1px] bg-white/10 my-6 -mx-6">
+                  <div className="bg-[#0d0d0d] p-6">
+                    <div className="label">Ambulances En Route</div>
+                    <h3 className="font-syne text-5xl font-extrabold tracking-tighter mt-1">03</h3>
+                  </div>
+                  <div className="bg-[#0d0d0d] p-6">
+                    <div className="label">Preempted Signals</div>
+                    <h3 className="font-syne text-5xl font-extrabold tracking-tighter mt-1">08</h3>
+                  </div>
+                  <div className="bg-[#0d0d0d] p-6">
+                    <div className="label">Critical Bay Availability</div>
+                    <h3 className="font-syne text-5xl font-extrabold tracking-tighter mt-1 text-[#ff2d55]">
+                      {freeCritical}/{totalCritical}
+                    </h3>
+                  </div>
+                  <div className="bg-[#0d0d0d] p-6">
+                    <div className="label">Transit Advantage</div>
+                    <h3 className="font-syne text-5xl font-extrabold tracking-tighter mt-1 text-[#00f2ff]">-4.6m</h3>
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-4">
+                  <div className="label mb-3">Active Fleet Status</div>
+                  <div className="space-y-2">
+                    {ambulances.map(a => (
+                      <div key={a.id} className={`p-3 bg-[#1a1a1c] border-l-3 ${a.status === 'available' ? 'border-l-[#00ffaa]' : 'border-l-[#ff2d55] bg-[#ff2d55]/5'}`}>
+                        <div className="flex justify-between items-center">
+                          <span className="label text-white font-bold">{a.callsign}</span>
+                          <span className={`unit-badge ${a.status === 'available' ? 'text-[#00ffaa] border-[#00ffaa]' : 'text-[#ff2d55] border-[#ff2d55]'}`}>
+                            {a.status === 'available' ? 'Available' : a.code}
+                          </span>
+                        </div>
+                        {a.status !== 'available' && (
+                          <div className="text-[11px] mt-1 text-white/50 font-mono-tech">
+                            ETA {Math.floor(a.eta / 60)}M · {a.hosp}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              {/* Center Column: Radar */}
+              <section className="border-r border-white/10 p-0 bg-[#050505] flex flex-col relative">
+                <div className="px-6 py-3.5 border-b border-white/10 bg-[#0d0d0d] flex justify-between items-center">
+                  <span className="label">Corridor Preemption Vector Radar</span>
+                  <span className="unit-badge text-[#00f2ff] border-[#00f2ff]/40">Sector 01-04 Active</span>
+                </div>
+
+                <div className="flex-1 relative overflow-hidden bg-[#050505]">
+                  <svg className="w-full h-full" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="20" stroke="#00f2ff" strokeWidth="0.2" fill="none" strokeDasharray="1 1" opacity="0.3" />
+                    <circle cx="50" cy="50" r="35" stroke="#00f2ff" strokeWidth="0.2" fill="none" strokeDasharray="2 2" opacity="0.2" />
+                    
+                    {/* Emergency Corridor alpha */}
+                    <polyline points="28,60 38,52 48,44 58,38 68,32 74,28" stroke="#ff2d55" strokeWidth="1.2" fill="none" className="animate-ecg" />
+                    <polyline points="18,80 22,64 24,48 26,35" stroke="#00f2ff" strokeWidth="1.2" fill="none" className="animate-ecg" />
+
+                    {/* Ambulance nodes */}
+                    <circle cx="52" cy="42" r="1.5" fill="#ff2d55" />
+                    <text x="55" y="43" fill="#ff2d55" fontSize="3" fontFamily="JetBrains Mono" fontWeight="bold">ALS-01 [VECTOR ACTIVE]</text>
+
+                    <circle cx="34" cy="56" r="1.5" fill="#ff2d55" />
+                    <text x="37" y="57" fill="#ff2d55" fontSize="3" fontFamily="JetBrains Mono" fontWeight="bold">MICU-04 [VECTOR ACTIVE]</text>
+                  </svg>
+
+                  <div className="absolute bottom-5 right-6 text-right">
+                    <div className="label text-[#00f2ff]">TSPS Priority Wave</div>
+                    <div className="font-mono-tech text-2xl font-bold">ACTIVE</div>
+                  </div>
+                </div>
+
+                <div className="p-4 border-t border-white/10 bg-[#0d0d0d] grid grid-cols-2">
+                  <div>
+                    <div className="label">Tracking Unit</div>
+                    <div className="font-mono-tech font-bold">MICU-04 / 62 km/h</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="label">Estimated Arrival</div>
+                    <div className="font-mono-tech font-bold text-[#00f2ff]">06:40 Mins</div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Right Column: Vitals & Triage Matrix */}
+              <section className="p-6 bg-[#0d0d0d] flex flex-col space-y-6">
+                <div>
+                  <div className="label mb-3">Field Vitals Stream [Real-Time]</div>
+                  <div className="card-tactical card-urgent">
+                    <div className="flex justify-between items-baseline">
+                      <h4 className="font-syne text-lg font-bold uppercase">{patient.name}</h4>
+                      <span className="unit-badge text-[#ff2d55] border-[#ff2d55]">ESI {patient.esi}</span>
+                    </div>
+                    <div className="label my-1.5">{patient.age}y/{patient.gender} · {patient.id}</div>
+                    <p className="text-xs text-white/60 mb-3 font-sans">{patient.complaint}</p>
+
+                    {/* Vitals row */}
+                    <div className="flex gap-6 font-mono-tech">
+                      <div>
+                        <span className="label text-[9px] block">HR</span>
+                        <span className="font-bold text-lg text-[#ff2d55]">{patient.vitals.hr}</span>
+                      </div>
+                      <div>
+                        <span className="label text-[9px] block">BP</span>
+                        <span className="font-bold text-lg">{patient.vitals.sbp}/{patient.vitals.dbp}</span>
+                      </div>
+                      <div>
+                        <span className="label text-[9px] block">SPO2</span>
+                        <span className="font-bold text-lg text-[#00f2ff]">{patient.vitals.spo2}%</span>
+                      </div>
+                    </div>
+
+                    {patient.status === 'delivered' && (
+                      <div className="mt-3 p-2 bg-[#00ffaa]/10 border border-[#00ffaa]/40 text-[#00ffaa] text-[10px] font-mono-tech flex justify-between">
+                        <span>DELIVERED · BED OCCUPIED</span>
+                        <span>{patient.deliveryTime}</span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                      <button onClick={() => setView('telemetry')} className="btn-tactical-outline w-full text-center">
+                        Telemetry Stream
+                      </button>
+                      <button onClick={() => setIsHandoffOpen(true)} className="btn-tactical w-full text-center">
+                        {patient.status === 'delivered' ? 'Handoff Done' : 'Patient Handoff'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="label mb-3">Bed Triage Matrix</div>
+                  <div className="grid gap-[1px] bg-white/10 font-mono-tech">
+                    {hospitals.map(h => {
+                      const free = h.beds.traumaBay.total - h.beds.traumaBay.occ - h.beds.traumaBay.res;
+                      return (
+                        <div key={h.id} className="bg-[#0d0d0d] p-3 flex justify-between items-center">
+                          <span className="text-xs font-semibold uppercase">{h.shortName}</span>
+                          <span className={`font-bold text-xs ${free > 0 ? 'text-[#00ffaa]' : 'text-[#ff2d55]'}`}>
+                            {free > 0 ? `${free} FREE` : 'FULL'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            </main>
+          )}
+
+          {/* Telemetry Detail View */}
+          {view === 'telemetry' && (
+            <div className="p-6 max-w-6xl mx-auto flex-1 space-y-6">
+              <h2 className="font-syne text-2xl font-bold uppercase">{patient.name} - In-Transit Vitals</h2>
+              <div className="p-4 bg-[#050505] border border-white/10">
+                <div className="label text-[#00ffaa] mb-2">LEAD II CONTINUOUS ECG (25MM/S)</div>
+                <canvas ref={canvasRef} width={800} height={120} className="w-full bg-[#050505]" />
+              </div>
+              <div className="grid grid-cols-4 gap-3 font-mono-tech">
+                <div className="p-4 bg-[#1a1a1c] border border-white/10">
+                  <div className="label">Heart Rate</div>
+                  <div className="text-3xl font-bold text-[#ff2d55]">{patient.vitals.hr} BPM</div>
+                </div>
+                <div className="p-4 bg-[#1a1a1c] border border-white/10">
+                  <div className="label">Blood Pressure</div>
+                  <div className="text-3xl font-bold">{patient.vitals.sbp}/{patient.vitals.dbp}</div>
+                </div>
+                <div className="p-4 bg-[#1a1a1c] border border-white/10">
+                  <div className="label">Oxygen Saturation</div>
+                  <div className="text-3xl font-bold text-[#00f2ff]">{patient.vitals.spo2}%</div>
+                </div>
+                <div className="p-4 bg-[#1a1a1c] border border-white/10">
+                  <div className="label">GCS Level</div>
+                  <div className="text-3xl font-bold">{patient.vitals.gcs} / 15</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Patient Handoff Modal */}
+          {isHandoffOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+              <div className="w-full max-w-xl bg-[#1a1a1c] border border-white/20 p-6 space-y-4 font-mono-tech text-xs">
+                <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                  <div>
+                    <div className="label text-[#00f2ff]">CRITICAL CARE HANDOFF PROTOCOL</div>
+                    <h3 className="font-syne text-lg font-bold uppercase text-white mt-0.5">Patient Handoff & Bed Transfer</h3>
+                  </div>
+                  <button onClick={() => setIsHandoffOpen(false)} className="text-white/50 hover:text-white border border-white/10 p-1">✕</button>
+                </div>
+
+                <div className="p-3 bg-[#0d0d0d] border border-white/10 flex justify-between">
+                  <div>
+                    <div className="font-bold text-white text-sm">{patient.name} ({patient.id})</div>
+                    <div className="text-white/40 text-[10px] mt-0.5">{patient.complaint}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="label">DESTINATION BAY</div>
+                    <div className="text-[#00ffaa] font-bold">Metro Trauma - Bay #1</div>
+                    <div className="text-[10px] text-white/40">STATUS: <span className="text-[#ffd60a]">RESERVED</span> → <span className="text-[#ff2d55] font-bold">OCCUPIED</span></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="label mb-1.5">FINAL PATIENT VITALS ON ARRIVAL:</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="p-2 bg-[#0d0d0d] border border-white/10">
+                      <div className="text-[9px] text-white/40">HR (BPM)</div>
+                      <input type="number" value={handoffVitals.hr} onChange={(e) => setHandoffVitals({ ...handoffVitals, hr: Number(e.target.value) })} className="w-full bg-[#1a1a1c] text-white font-bold p-1 text-xs" />
+                    </div>
+                    <div className="p-2 bg-[#0d0d0d] border border-white/10">
+                      <div className="text-[9px] text-white/40">BP (SYS/DIA)</div>
+                      <div className="flex gap-1 items-center">
+                        <input type="number" value={handoffVitals.sbp} onChange={(e) => setHandoffVitals({ ...handoffVitals, sbp: Number(e.target.value) })} className="w-full bg-[#1a1a1c] text-white font-bold p-1 text-xs" />
+                        <span>/</span>
+                        <input type="number" value={handoffVitals.dbp} onChange={(e) => setHandoffVitals({ ...handoffVitals, dbp: Number(e.target.value) })} className="w-full bg-[#1a1a1c] text-white font-bold p-1 text-xs" />
+                      </div>
+                    </div>
+                    <div className="p-2 bg-[#0d0d0d] border border-white/10">
+                      <div className="text-[9px] text-white/40">SPO2 (%)</div>
+                      <input type="number" value={handoffVitals.spo2} onChange={(e) => setHandoffVitals({ ...handoffVitals, spo2: Number(e.target.value) })} className="w-full bg-[#1a1a1c] text-white font-bold p-1 text-xs" />
+                    </div>
+                    <div className="p-2 bg-[#0d0d0d] border border-white/10">
+                      <div className="text-[9px] text-white/40">GCS SCORE</div>
+                      <input type="number" value={handoffVitals.gcs} onChange={(e) => setHandoffVitals({ ...handoffVitals, gcs: Number(e.target.value) })} className="w-full bg-[#1a1a1c] text-white font-bold p-1 text-xs" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="label mb-1.5">FINAL CLINICAL TRIAGE NOTES:</div>
+                  <textarea rows={2} value={handoffNotes} onChange={(e) => setHandoffNotes(e.target.value)} className="w-full bg-[#0d0d0d] border border-white/15 p-2 text-white text-xs" />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                  <button type="button" onClick={() => setIsHandoffOpen(false)} className="btn-tactical-outline py-2 px-3 text-xs">Cancel</button>
+                  <button type="button" onClick={completeHandoff} className="btn-tactical py-2 px-4 text-xs font-bold text-black bg-white hover:bg-[#00f2ff]">
+                    VALIDATE HANDOFF & OCCUPY BED
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <footer className="h-12 px-6 border-t border-white/10 flex justify-between items-center bg-[#1a1a1c]">
+            <div className="label">PULSEPATH E.T.S. // VERSION 4.3.0_STABLE</div>
+            <div className="flex gap-8 font-mono-tech text-xs">
+              <span className="text-[#00ffaa]">● TAC-01 ACTIVE</span>
+              <span className="text-[#00f2ff]">● CORRIDOR WAVE ONLINE</span>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

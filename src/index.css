@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0d0d0d;
+  --ink: #ffffff;
+  --accent: #00f2ff;
+  --danger: #ff2d55;
+  --success: #00ffaa;
+  --surface: #1a1a1c;
+  --border: rgba(255, 255, 255, 0.08);
+  --ink-muted: rgba(255, 255, 255, 0.4);
+}
+
+@layer base {
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.font-syne {
+  font-family: 'Syne', sans-serif;
+}
+
+.font-mono-tech {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.unit-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-tactical {
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  padding: 0.6rem 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-tactical:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-tactical-outline {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  padding: 0.6rem 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-tactical-outline:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.card-tactical {
+  background: var(--surface);
+  border-left: 3px solid var(--ink-muted);
+  padding: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.card-urgent {
+  border-left-color: var(--danger) !important;
+  background: rgba(255, 45, 85, 0.05) !important;
+}
+
+/* Custom telemetry scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #0d0d0d;
+}
+::-webkit-scrollbar-thumb {
+  background: #262626;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #404040;
+}
+
+/* Radar ping sweep keyframes */
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.radar-sweep {
+  animation: radar-sweep 4s linear infinite;
+  transform-origin: center center;
+}
+
+@keyframes ecg-dash {
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+
+.animate-ecg {
+  stroke-dasharray: 20 8;
+  animation: ecg-dash 20s linear infinite;
+}

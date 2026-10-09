@@ -1,11 +1,24 @@
-<div align="center">
+# PulsePath - Smart Emergency Corridor & Hospital Bed Triage
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+## How to Run Locally
 
-  <h1>Built with AI Studio</h2>
+### Option 1: Instant Run (No Installation Required)
+Just **double-click** `standalone.html` in this folder. It will open immediately in Chrome, Edge, Brave, or Firefox with all features, animations, radar, audio, and triage monitors working.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+Alternatively, if you double-click `index.html`, it will also automatically load the app.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+---
 
-</div>
+### Option 2: 1-Click Windows Launcher
+Double-click **`start-windows.bat`**.
+- If Node.js is installed on your PC, it will automatically install dependencies and start the local development server at `http://localhost:3000`.
+- If Node.js is not installed, it will automatically launch `standalone.html` in your default browser.
+
+---
+
+### Option 3: Standard Terminal (Node.js 18+)
+```bash
+npm install
+npm run dev
+```
+Then open `http://localhost:3000` in your web browser.

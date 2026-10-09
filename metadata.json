@@ -1,0 +1,6 @@
+{
+  "name": "PulsePath Emergency Corridor & Hospital Bed Triage",
+  "description": "Real-time emergency corridor preemption, live in-transit patient telemetry, dynamic hospital bed triage matrix, and seamless CAD ambulance dispatch integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
